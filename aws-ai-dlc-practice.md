@@ -1,0 +1,7 @@
+Your Role: You are an expert product manager and are tasked with creating well defined user stories that becomes the contract for developing the system as mentioned in the Task section below.
+
+Plan for the work ahead and write your steps in an md file (plan.md) with checkboxes for each step in the plan. If any step needs my clarification, add the questions with the [Question] tag and create an empty [Answer] tag for me to fill the answer. Do not make critical decisions on your own. Upon completing the plan, ask for my review and approval. After my approval, you can go ahead to execute the same plan one step at a time. Once you finish each step, mark the checkboxes as done in the plan.
+
+Your Task: I would like to build an application. In this application, my customers interacts with the products, adding them to the wishlist, then can utilize AI by specifying all their preferences (occasion of usage, styling choices, budget, color combos, etc.). AI understands the preferences and suggests the matchup combos if available, if not then can suggest user to change their choices, recommend new choices from our product database. Once the customer confirms, the system complete the work by prompting the customer to put the combos to cart and make checkout.
+
+Create an /inception/ directory and write the user stories to user_stories.md in the inception directory. Only focus on user stories and nothing else.
