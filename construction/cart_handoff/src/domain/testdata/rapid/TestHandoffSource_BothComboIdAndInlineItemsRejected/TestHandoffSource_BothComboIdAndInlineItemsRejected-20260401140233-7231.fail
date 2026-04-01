@@ -1,0 +1,13 @@
+# 2026/04/01 14:02:33.639620 [TestHandoffSource_BothComboIdAndInlineItemsRejected] [rapid] draw n: 1
+# 2026/04/01 14:02:33.639649 [TestHandoffSource_BothComboIdAndInlineItemsRejected] [rapid] draw comboId: "A"
+# 2026/04/01 14:02:33.639662 [TestHandoffSource_BothComboIdAndInlineItemsRejected] expected error when both ComboId and Items are set
+# 
+v0.4.8#1080295522917402568
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
