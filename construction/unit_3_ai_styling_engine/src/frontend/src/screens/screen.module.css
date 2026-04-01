@@ -1,0 +1,261 @@
+.screen {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px 16px 120px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  padding: 6px 14px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+
+.chipActive {
+  background: #1a1a1a;
+  color: white;
+  border-color: #1a1a1a;
+}
+
+.chipDanger {
+  background: #fde8e8;
+  border-color: #e53e3e;
+  color: #c53030;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #eee;
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.btnPrimary {
+  padding: 10px 20px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  padding: 10px 20px;
+  background: white;
+  color: #1a1a1a;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btnDanger {
+  padding: 6px 14px;
+  background: white;
+  color: #c53030;
+  border: 1px solid #c53030;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.summaryCard {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.comboCard {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+}
+
+.card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+  display: flex;
+  gap: 12px;
+}
+
+.productRow {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.productTile {
+  min-width: 120px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.productImage {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f0f0f0;
+}
+
+.catalogBadge {
+  display: inline-block;
+  font-size: 0.7rem;
+  background: #e8f4f8;
+  color: #2b6cb0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 4px;
+}
+
+.productName {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin: 4px 0 2px;
+}
+
+.brand {
+  font-size: 0.75rem;
+  color: #666;
+  margin: 0;
+}
+
+.price {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+
+.reasoning {
+  font-size: 0.875rem;
+  color: #444;
+  margin: 12px 0 8px;
+  line-height: 1.5;
+}
+
+.reason {
+  font-size: 0.8rem;
+  color: #555;
+  font-style: italic;
+  margin: 4px 0 0;
+}
+
+.comboActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.message {
+  margin-bottom: 16px;
+  color: #555;
+}
+
+.loading {
+  text-align: center;
+  color: #888;
+  padding: 16px;
+}
+
+.exhaustedMsg {
+  text-align: center;
+  color: #888;
+  padding: 24px 16px;
+  font-size: 0.9rem;
+}
+
+.error {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  color: #c53030;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+
+.cardBody {
+  flex: 1;
+}
