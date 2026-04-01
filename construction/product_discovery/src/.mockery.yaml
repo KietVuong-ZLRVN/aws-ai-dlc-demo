@@ -1,0 +1,9 @@
+quiet: true
+disable-version-string: true
+with-expecter: true
+outpkg: mocks
+dir: mocks
+packages:
+  product_discovery/domain/port:
+    interfaces:
+      PlatformProductClient:

@@ -1,0 +1,19 @@
+# 2026/04/01 15:05:42.678314 [TestPriceRange_RoundTrip] [rapid] draw min: 6.103515625e-05
+# 2026/04/01 15:05:42.678320 [TestPriceRange_RoundTrip] [rapid] draw max: 1
+# 2026/04/01 15:05:42.678325 [TestPriceRange_RoundTrip] unexpected error: invalid price range min "6.103515625e": strconv.ParseFloat: parsing "6.103515625e": invalid syntax
+# 
+v0.4.8#4375606640589623054
+0x0
+0x10000000000000
+0x943dab5850d10
+0xd
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

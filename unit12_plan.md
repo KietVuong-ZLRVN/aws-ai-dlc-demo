@@ -207,3 +207,300 @@ All platform API clients, repositories, and event stores are in-memory (no real 
 #### Demo & Docs
 - [x] **Step 31 — Demo script** (`construction/demo.sh`): starts both backends and Vite dev server, opens browser
 - [x] **Step 32 — Demo README**: see below
+
+---
+
+## Phase 4: Test Plan — Backend Systems (Unit 1 + Unit 2)
+
+### Scope
+Backend test coverage for:
+- **Unit 1 — Product Discovery** (`construction/product_discovery/src/`)
+- **Unit 2 — Wishlist Management** (`construction/wishlist/src/`)
+
+Testing strategy: **Property-Based Testing (PBT)** as the primary method, supplemented by example-based tests for HTTP boundary behaviour. All tests are self-contained — no real platform calls.
+
+---
+
+### Questions Requiring Clarification
+
+[Question] **Q1 — PBT library choice:** Standard Go PBT options are `pgregory.net/rapid` (idiomatic, built-in shrinking) and `github.com/leanovate/gopter` (richer generator combinators). This plan assumes `pgregory.net/rapid`. Is that acceptable, or do you have a preference?
+[Answer] Acceptable
+
+[Question] **Q2 — Test doubles for infrastructure:** Both units ship in-memory infrastructure stubs (`in_memory_product_client.go`, `in_memory_wishlist_repository.go`, `in_memory_auth_service.go`). The plan proposes using those stubs directly as test doubles. Do you want generated mocks instead (e.g., `github.com/vektra/mockery`), or are the existing stubs sufficient?
+[Answer] Generated mocks
+
+[Question] **Q3 — Coverage target:** Should we enforce a minimum line/branch coverage percentage (e.g., 80%)? If yes, what threshold?
+[Answer] 75%
+
+[Question] **Q4 — HTTP handler test depth:** The plan includes `net/http/httptest` handler tests that exercise the full handler → application service → in-memory infra path. Do you prefer this integration-style handler coverage, or pure unit tests for the domain layer only?
+[Answer] pure unit tests
+
+---
+
+### Plan Steps
+
+#### Phase 4.0 — Test Infrastructure Setup
+
+- [x] **4.0.1** Add `pgregory.net/rapid` as a test-only dependency in `construction/product_discovery/src/go.mod` and run `go mod tidy`.
+- [x] **4.0.2** Add `pgregory.net/rapid` as a test-only dependency in `construction/wishlist/src/go.mod` and run `go mod tidy`.
+- [x] **4.0.3** Verify both modules build cleanly (`go build ./...`) after adding the dependency.
+- [x] **4.0.4** Install `mockery` v2 (`go install github.com/vektra/mockery/v2@latest`) and add a `//go:generate` directive for each interface requiring a mock:
+  - Unit 1: `PlatformProductApiClient` in `domain/port/platform_product_client.go`
+  - Unit 2: `WishlistRepository` in `domain/repository/wishlist_repository.go`, `AuthSessionService` in `domain/service/auth_session_service.go`, `EventBus` in `domain/event/` (or wherever the interface is declared)
+- [x] **4.0.5** Run `go generate ./...` in each module to produce mock files under `mocks/`. Confirm generated files compile.
+- [x] **4.0.6** Create a shared test generator helpers file in each module (inline in `_test.go` files or a `testgen` package) defining reusable `rapid` generators: `genSimpleSku`, `genConfigSku`, `genWishlistItem`, `genWishlistWithN`, `genPlatformProduct`, `genPlatformDetailPayload`, `genFilterPayload`, `genValidPagination`.
+
+---
+
+#### Phase 4.1 — Unit 1: Value Object PBT Tests
+
+**File:** `construction/product_discovery/src/domain/valueobject/price_range_test.go`
+
+- [x] **4.1.1** PBT — **PriceRange valid construction**: For all `(min, max float64)` where `0 ≤ min ≤ max`, `NewPriceRange("min-max")` returns no error and the result has `Min == min` and `Max == max`.
+- [x] **4.1.2** PBT — **PriceRange rejects invalid range**: For all `(min, max)` where `min > max`, `NewPriceRange` returns a non-nil error.
+- [x] **4.1.3** PBT — **PriceRange rejects negative min**: For all `min < 0`, `NewPriceRange` with any `max` returns a non-nil error.
+- [x] **4.1.4** Example — **PriceRange rejects malformed strings**: No `-` separator, empty string, single number, non-numeric values each return errors.
+- [x] **4.1.5** PBT — **PriceRange round-trip**: `NewPriceRange(fmt.Sprintf("%v-%v", min, max))` produces `PriceRange{Min: min, Max: max}` for any valid `(min, max)` pair.
+
+**File:** `construction/product_discovery/src/domain/valueobject/pagination_test.go`
+
+- [x] **4.1.6** PBT — **Pagination valid construction**: For all `offset ≥ 0` and `limit ≥ 1`, `NewPagination` returns no error with correct field values.
+- [x] **4.1.7** PBT — **Pagination rejects negative offset**: For all `offset < 0`, `NewPagination` returns error.
+- [x] **4.1.8** PBT — **Pagination rejects zero/negative limit**: For all `limit ≤ 0`, `NewPagination` returns error.
+
+**File:** `construction/product_discovery/src/domain/valueobject/money_test.go`
+
+- [x] **4.1.9** PBT — **Money valid construction**: For all `amount ≥ 0.0`, `NewMoney` returns no error and `money.Amount == amount`.
+- [x] **4.1.10** PBT — **Money rejects negative amount**: For all `amount < 0`, `NewMoney` returns error.
+
+---
+
+#### Phase 4.2 — Unit 1: Domain Assembler PBT Tests
+
+**File:** `construction/product_discovery/src/domain/assembler/product_list_assembler_test.go`
+
+- [x] **4.2.1** PBT — **inStock derivation**: For any generated platform product list, each assembled `ProductSummaryReadModel.InStock` is `true` if and only if at least one `simple` has `stock > 0`.
+- [x] **4.2.2** PBT — **Total count passthrough**: For any raw platform list payload, `ProductListReadModel.Total` equals the payload's `numProductFound` field.
+- [x] **4.2.3** PBT — **Item count preservation**: The number of `Items` in the assembled model equals the number of products in the raw payload.
+- [x] **4.2.4** PBT — **FilterFacets color passthrough**: For any raw filter payload with `N` color facets, `FilterFacetsReadModel.Colors` has exactly `N` entries with matching `id`, `label`, and `count`.
+- [x] **4.2.5** PBT — **FilterFacets occasion passthrough**: Same as 4.2.4 for `occasions`.
+- [x] **4.2.6** PBT — **PriceRange facet passthrough**: `FilterFacetsReadModel.PriceRange` matches the raw `filters.price` `min`/`max` values exactly.
+
+**File:** `construction/product_discovery/src/domain/assembler/product_detail_assembler_test.go`
+
+- [x] **4.2.7** PBT — **Variant inStock derivation**: For any platform detail payload, each assembled `ProductVariantReadModel.InStock` equals `(variant.quantity > 0)`.
+- [x] **4.2.8** PBT — **Field name mapping**: `config_sku → ConfigSku`, `url_key → Slug`, `name → Name`, `brand → Brand`, `description → Description` are all correctly mapped.
+- [x] **4.2.9** PBT — **Variant count preservation**: Number of assembled `Variants` equals number of `simples` in the raw payload.
+- [x] **4.2.10** PBT — **Images passthrough**: Assembled `Images` slice has the same length and identical elements as the raw `images` array.
+
+---
+
+#### Phase 4.3 — Unit 1: Application Layer Tests
+*(Uses generated `MockPlatformProductApiClient` — no real HTTP calls)*
+
+**File:** `construction/product_discovery/src/application/product_list_query_handler_test.go`
+
+- [x] **4.3.1** Example — **Success path**: Mock returns valid list + filter payloads → `Handle` returns a `ProductListReadModel` with no error.
+- [x] **4.3.2** Example — **List fetch failure**: Mock `FetchProductList` returns error → `Handle` returns `ProductListUnavailable`.
+- [x] **4.3.3** Example — **Filter fetch failure**: Mock `FetchProductFilters` returns error → `Handle` returns `ProductListUnavailable`.
+- [x] **4.3.4** PBT — **Payload routing correctness**: For any combination of list and filter payloads returned by the mock, assembled `Items` come from the list payload and assembled `Filters` come from the filter payload (no cross-contamination).
+
+**File:** `construction/product_discovery/src/application/product_detail_query_handler_test.go`
+
+- [x] **4.3.5** Example — **Success path**: Mock returns valid payload → `Handle` returns `ProductDetailReadModel`.
+- [x] **4.3.6** Example — **Not found**: Mock returns `(nil, nil)` → `Handle` returns `ProductNotFound`.
+- [x] **4.3.7** Example — **Platform error**: Mock returns transport error → `Handle` returns `ProductDetailUnavailable`.
+- [x] **4.3.8** PBT — **Identity mapping**: For any valid platform detail payload returned by the mock, assembled `ConfigSku` equals the `config_sku` field of the input.
+
+---
+
+#### Phase 4.5 — Unit 2: Value Object PBT Tests
+
+**File:** `construction/wishlist/src/domain/valueobject/simple_sku_test.go`
+
+- [x] **4.5.1** PBT — **SimpleSku valid construction**: For any non-empty string, `NewSimpleSku` returns no error and `sku.String()` equals the input.
+- [x] **4.5.2** Example — **SimpleSku rejects empty string**: `NewSimpleSku("")` returns error.
+
+**File:** `construction/wishlist/src/domain/valueobject/config_sku_test.go`
+
+- [x] **4.5.3** PBT — **ConfigSku valid construction**: For any non-empty string, `NewConfigSku` returns no error.
+- [x] **4.5.4** Example — **ConfigSku rejects empty string**: `NewConfigSku("")` returns error.
+
+**File:** `construction/wishlist/src/domain/valueobject/money_test.go`
+
+- [x] **4.5.5** PBT — **Money valid construction**: For all `amount ≥ 0.0`, `NewMoney` returns no error.
+- [x] **4.5.6** PBT — **Money rejects negative**: For all `amount < 0`, `NewMoney` returns error.
+
+**File:** `construction/wishlist/src/domain/valueobject/pagination_test.go`
+
+- [x] **4.5.7** PBT — **Pagination valid construction**: For `offset ≥ 0` and `limit ≥ 1`, `NewPagination` returns no error with correct fields.
+- [x] **4.5.8** PBT — **Pagination rejects negative offset**: For all `offset < 0`, returns error.
+- [x] **4.5.9** PBT — **Pagination rejects zero/negative limit**: For all `limit ≤ 0`, returns error.
+
+---
+
+#### Phase 4.6 — Unit 2: Wishlist Aggregate PBT Tests
+
+**File:** `construction/wishlist/src/domain/aggregate/wishlist_test.go`
+
+- [x] **4.6.1** PBT — **deriveConfigSku two-part extraction**: For any SimpleSku string with ≥2 dash-separated parts (e.g., `"PD-001-M-BLK"`), `deriveConfigSku` returns the first two parts joined by `-` (e.g., `"PD-001"`).
+- [x] **4.6.2** PBT — **deriveConfigSku single-part fallback**: For any SimpleSku string with no dashes, `deriveConfigSku` returns the whole string unchanged.
+- [x] **4.6.3** PBT — **AddItem duplicate prevention**: For any `Wishlist` containing an item whose `ConfigSku` matches the derived configSku of the incoming `SimpleSku`, `AddItem` returns `ErrWishlistItemAlreadyPresent`.
+- [x] **4.6.4** PBT — **AddItem success on empty wishlist**: For any valid `SimpleSku`, `AddItem` on an empty `Wishlist` returns `AddItemIntent` with no error.
+- [x] **4.6.5** PBT — **AddItem success on non-conflicting wishlist**: For any `Wishlist` whose items all have configSkus different from the new item's derived configSku, `AddItem` succeeds.
+- [x] **4.6.6** PBT — **AddItemIntent carries correct configSku**: For any successful `AddItem`, `AddItemIntent.ConfigSku` equals `deriveConfigSku(simpleSku)`.
+- [x] **4.6.7** PBT — **RemoveItem is always non-error**: For any `Wishlist` (empty, non-empty, item present or absent), `RemoveItem(configSku)` always returns a `RemoveItemIntent` with the given `ConfigSku` and no error.
+- [x] **4.6.8** PBT — **ToggleItem returns RemoveIntent when item present**: For any `Wishlist` containing an item with `configSku == X`, `ToggleItem(simpleSku, X)` returns a `RemoveItemIntent`.
+- [x] **4.6.9** PBT — **ToggleItem returns AddIntent when item absent**: For any `Wishlist` with no item having `configSku == X`, `ToggleItem(simpleSku, X)` returns an `AddItemIntent`.
+- [x] **4.6.10** PBT — **ToggleItem idempotency**: Starting from a wishlist without item `X`, calling ToggleItem (absent → add intent) and then again (present → remove intent) returns the aggregate to a state where `AddItem` succeeds again — no invariant violation.
+
+---
+
+#### Phase 4.7 — Unit 2: WishlistAssembler PBT Tests
+
+**File:** `construction/wishlist/src/domain/assembler/wishlist_assembler_test.go`
+
+- [x] **4.7.1** PBT — **Item count preservation**: For any raw platform wishlist payload with `N` items, `Wishlist.Items` has exactly `N` elements.
+- [x] **4.7.2** PBT — **TotalCount passthrough**: Assembled `Wishlist.TotalCount` equals the `totalCount` field in the raw payload.
+- [x] **4.7.3** PBT — **Field mapping**: For any raw item, `itemId → ItemId.Value`, `simpleSku → SimpleSku.Value`, `configSku → ConfigSku.Value`, `product.name → Name`, `product.brand → Brand`, `product.price → Price.Amount`, `product.image → ImageUrl` are all correctly mapped.
+- [x] **4.7.4** PBT — **inStock passthrough**: Assembled `WishlistItem.InStock` equals the `inStock` boolean on the raw item.
+- [x] **4.7.5** Example — **Empty items array**: Assembling a payload with `items: []` produces `Wishlist.Items == []` with no error.
+
+---
+
+#### Phase 4.8 — Unit 2: Application Service Tests
+*(Uses generated `MockWishlistRepository`, `MockAuthSessionService`, `MockEventBus` — no HTTP, no real I/O)*
+
+**File:** `construction/wishlist/src/application/get_wishlist_service_test.go`
+
+- [x] **4.8.1** Example — **Unauthenticated returns error**: Mock `AuthSessionService` returns `UnauthenticatedShopperError` → service returns that error without calling repo.
+- [x] **4.8.2** Example — **Authenticated success**: Mock auth resolves shopperId; mock repo returns wishlist → service returns shaped items with no error.
+- [x] **4.8.3** PBT — **Item shape completeness**: For any `Wishlist` with `N` items returned by the mock repo, the service response contains exactly `N` items, each with all required fields: `itemId`, `simpleSku`, `configSku`, `name`, `brand`, `price`, `imageUrl`, `color`, `size`, `inStock`.
+
+**File:** `construction/wishlist/src/application/add_wishlist_item_service_test.go`
+
+- [x] **4.8.4** Example — **Unauthenticated triggers auth gate event**: Mock auth fails → service emits `AuthenticationGateTriggered` on mock event bus and returns `UnauthenticatedShopperError`.
+- [x] **4.8.5** Example — **Duplicate configSku returns conflict error**: Mock repo returns wishlist already containing the derived `configSku` → `ErrWishlistItemAlreadyPresent` returned; mock repo `AddItem` is never called.
+- [x] **4.8.6** Example — **Success emits WishlistItemAdded**: Mock repo `AddItem` succeeds → `WishlistItemAdded` event published on mock event bus with correct `shopperId`, `simpleSku`, `configSku`, `itemId`.
+- [x] **4.8.7** PBT — **No repo call on duplicate**: For any wishlist state containing configSku `X`, calling the service with a SimpleSku that derives to `X` never invokes `WishlistRepository.AddItem` on the mock.
+- [x] **4.8.8** PBT — **Response fields match repo return**: For any `WishlistItemId` returned by the mock repo, the service response `itemId` field equals that value exactly.
+
+**File:** `construction/wishlist/src/application/remove_wishlist_item_service_test.go`
+
+- [x] **4.8.9** Example — **Unauthenticated returns error**: Mock auth fails → `UnauthenticatedShopperError` propagated; mock repo `RemoveItemByConfigSku` never called.
+- [x] **4.8.10** Example — **Success emits WishlistItemRemoved**: Mock remove succeeds → `WishlistItemRemoved` event published on mock event bus with correct `shopperId` and `configSku`.
+- [x] **4.8.11** PBT — **Event payload correctness**: For any `configSku` string, `WishlistItemRemoved.ConfigSku` in the event captured by the mock bus equals the input `configSku`.
+
+---
+
+#### Phase 4.10 — Unit 2: Event Bus PBT Tests
+
+**File:** `construction/wishlist/src/infrastructure/eventbus/in_memory_event_bus_test.go`
+
+- [x] **4.10.1** PBT — **All subscribers receive event**: For any event published with `N` registered handlers, all `N` handlers are called exactly once.
+- [x] **4.10.2** PBT — **Subscriber isolation**: Handlers subscribed to event type A do not receive events of type B.
+- [x] **4.10.3** PBT — **Handler call order**: Handlers are called in registration order.
+- [x] **4.10.4** Example — **No subscribers is a no-op**: Publishing an event with no subscribers does not panic or error.
+- [x] **4.10.5** Example — **Handler receives identical event**: The event argument passed to the handler equals (by value) the event that was published.
+
+---
+
+#### Phase 4.11 — Cross-Cutting: Unit 2 → Unit 3 Contract Tests
+*(Pure unit tests — JSON-marshal the domain struct directly, no HTTP server needed)*
+
+**File:** `construction/wishlist/src/domain/assembler/contract_test.go`
+
+- [x] **4.11.1** Example — **All Unit-3-required fields present in WishlistItem JSON**: Marshal a `WishlistItem` entity to JSON and assert that all nine required fields are present: `configSku`, `simpleSku`, `inStock`, `name`, `brand`, `price`, `imageUrl`, `color`, `size`.
+- [x] **4.11.2** PBT — **Required fields never omitted**: For any `WishlistItem` value generated by `genWishlistItem`, its JSON serialisation contains all nine Unit-3-required fields regardless of field values (no accidental `omitempty` on required fields).
+
+---
+
+#### Phase 4.12 — Test Execution and Reporting
+
+- [x] **4.12.1** Run all Unit 1 tests: `go test ./... -v` in `construction/product_discovery/src/`. All tests pass.
+- [x] **4.12.2** Run all Unit 2 tests: `go test ./... -v` in `construction/wishlist/src/`. All tests pass.
+- [x] **4.12.3** Run with race detector: `go test -race ./...` in both modules. No data races reported.
+- [x] **4.12.4** Generate coverage report and enforce 75% threshold: `go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out` for both units. Fail the step if total coverage falls below **75%**.
+- [x] **4.12.5** Document any coverage gaps or failing properties; raise follow-up tasks if needed.
+
+---
+
+### PBT Strategy Notes
+
+#### Library: `pgregory.net/rapid`
+
+Each PBT test uses `rapid.Check` to run a property hundreds of times with generated inputs. Failing inputs are automatically shrunk to the minimal counterexample.
+
+**Structure template:**
+```go
+func TestPriceRange_ValidConstruction(t *testing.T) {
+    rapid.Check(t, func(t *rapid.T) {
+        min := rapid.Float64Range(0, 1000).Draw(t, "min")
+        max := rapid.Float64Range(min, 2000).Draw(t, "max")
+
+        pr, err := valueobject.NewPriceRange(fmt.Sprintf("%v-%v", min, max))
+
+        if err != nil {
+            t.Fatalf("expected no error for valid (min=%v, max=%v), got: %v", min, max, err)
+        }
+        if pr.Min != min || pr.Max != max {
+            t.Fatalf("round-trip failed: got {%v, %v}, want {%v, %v}", pr.Min, pr.Max, min, max)
+        }
+    })
+}
+```
+
+#### Reusable Generators to Define
+
+| Generator | Module | Description |
+|---|---|---|
+| `genValidSimpleSku` | Unit 2 | Non-empty string; optionally shaped as `XX-NNN-S-CCC` |
+| `genValidConfigSku` | Unit 2 | Non-empty string; optionally shaped as `XX-NNN` |
+| `genWishlistItem` | Unit 2 | Fully populated `entity.WishlistItem` with random fields |
+| `genWishlistWithN` | Unit 2 | `Wishlist` aggregate with `N` random items |
+| `genPlatformProduct` | Unit 1 | Raw platform product struct with random simples |
+| `genPlatformDetailPayload` | Unit 1 | Raw platform product detail struct |
+| `genFilterPayload` | Unit 1 | Raw filter facets payload |
+| `genValidPagination` | Both | `(offset ≥ 0, limit ≥ 1)` pair |
+
+---
+
+### Test File Layout Summary
+
+```
+construction/product_discovery/src/
+├── mocks/                                    # Step 4.0.4–4.0.5 (mockery generated)
+│   └── mock_platform_product_client.go
+├── domain/valueobject/
+│   ├── price_range_test.go                   # Steps 4.1.1–4.1.5
+│   ├── pagination_test.go                    # Steps 4.1.6–4.1.8
+│   └── money_test.go                         # Steps 4.1.9–4.1.10
+├── domain/assembler/
+│   ├── product_list_assembler_test.go        # Steps 4.2.1–4.2.6
+│   └── product_detail_assembler_test.go      # Steps 4.2.7–4.2.10
+└── application/
+    ├── product_list_query_handler_test.go    # Steps 4.3.1–4.3.4
+    └── product_detail_query_handler_test.go  # Steps 4.3.5–4.3.8
+
+construction/wishlist/src/
+├── mocks/                                    # Step 4.0.4–4.0.5 (mockery generated)
+│   ├── mock_wishlist_repository.go
+│   ├── mock_auth_session_service.go
+│   └── mock_event_bus.go
+├── domain/valueobject/
+│   ├── simple_sku_test.go                    # Steps 4.5.1–4.5.2
+│   ├── config_sku_test.go                    # Steps 4.5.3–4.5.4
+│   ├── money_test.go                         # Steps 4.5.5–4.5.6
+│   └── pagination_test.go                    # Steps 4.5.7–4.5.9
+├── domain/aggregate/
+│   └── wishlist_test.go                      # Steps 4.6.1–4.6.10
+├── domain/assembler/
+│   ├── wishlist_assembler_test.go            # Steps 4.7.1–4.7.5
+│   └── contract_test.go                      # Steps 4.11.1–4.11.2
+├── application/
+│   ├── get_wishlist_service_test.go          # Steps 4.8.1–4.8.3
+│   ├── add_wishlist_item_service_test.go     # Steps 4.8.4–4.8.8
+│   └── remove_wishlist_item_service_test.go  # Steps 4.8.9–4.8.11
+└── infrastructure/eventbus/
+    └── in_memory_event_bus_test.go           # Steps 4.10.1–4.10.5
+```
