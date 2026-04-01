@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(npm --version)",
+      "Bash(/opt/homebrew/bin/go build:*)",
+      "Read(//private/tmp/**)",
+      "Bash(xargs kill:*)",
+      "Bash(/opt/homebrew/bin/go run:*)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -b \"session=test-token\" http://localhost:8080/api/v1/style/preferences/options)",
+      "Bash(curl -s -b session=test-token -X POST http://localhost:8080/api/v1/style/preferences/confirm -H 'Content-Type: application/json' -d '{\"occasions\":[\"casual\",\"beach\"],\"styles\":[\"minimalist\"],\"budget\":{\"min\":50,\"max\":200},\"colors\":{\"preferred\":[\"beige\",\"white\"],\"excluded\":[\"black\"]},\"freeText\":\"Something light for a summer trip\"}')",
+      "Bash(curl -s -b session=test-token -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{}')",
+      "Bash(curl -s -b session=test-token -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{\"preferences\":{\"occasions\":[\"casual\"],\"styles\":[\"minimalist\"],\"budget\":{\"min\":50,\"max\":200}}}')",
+      "Bash(curl -s -b session=test-token -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{\"excludeComboIds\":[\"combo-CFG-BLAZER-BLK-CFG-TROUSERS-BGE\"]}')",
+      "Bash(curl -s http://localhost:8080/api/v1/style/preferences/options)",
+      "Bash(curl -s -b \"session=test\" http://localhost:8080/api/v1/style/preferences/options)",
+      "Bash(curl -s -b session=test -X POST http://localhost:8080/api/v1/style/preferences/confirm -H 'Content-Type: application/json' -d '{\"occasions\":[\"casual\",\"beach\"],\"styles\":[\"minimalist\"],\"budget\":{\"min\":50,\"max\":200},\"colors\":{\"preferred\":[\"beige\",\"white\"],\"excluded\":[\"black\"]},\"freeText\":\"Something light for a summer trip\"}')",
+      "Bash(curl -s -b session=test -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{}')",
+      "Bash(curl -s -b session=test -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{\"preferences\":{\"occasions\":[\"casual\"],\"styles\":[\"minimalist\"]}}')",
+      "Bash(curl -s -b session=test -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{\"excludeComboIds\":[\"combo-CFG-BLAZER-BLK-CFG-TROUSERS-BGE\"]}')",
+      "Bash(/opt/homebrew/bin/npm install:*)",
+      "Bash(/opt/homebrew/bin/npm run:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['summary']\\)\")",
+      "Bash(curl -s -b session=test -X POST http://localhost:8080/api/v1/style/combos/generate -H 'Content-Type: application/json' -d '{\"excludeComboIds\":[\"combo-CFG-BLAZER-BLK-CFG-TROUSERS-BGE\",\"combo-CFG-TROUSERS-BGE-CFG-BLAZER-BLK\"]}')",
+      "Bash(curl -s -b \"session=test\" -X POST http://localhost:8080/api/v1/style/preferences/confirm -H \"Content-Type: application/json\" -d '{\"occasions\":[\"casual\"]}')",
+      "Bash(curl -s -b \"session=test\" -X POST http://localhost:8080/api/v1/style/combos/generate -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s -b \"session=test\" -X POST http://localhost:8080/api/v1/style/combos/generate -H \"Content-Type: application/json\" -d '{\"preferences\":{\"occasions\":[\"casual\"]}}')",
+      "Bash(curl -s -b \"session=test\" -X POST http://localhost:8080/api/v1/style/combos/generate -H \"Content-Type: application/json\" -d '{\"excludeComboIds\":[\"combo-CFG-BLAZER-BLK-CFG-TROUSERS-BGE\"]}')",
+      "Bash(curl -s -b \"session=test\" -X POST http://localhost:8080/api/v1/style/preferences/confirm -H \"Content-Type: application/json\" -d '{\"colors\":{\"preferred\":[\"black\"],\"excluded\":[\"black\"]}}')"
+    ]
+  }
+}

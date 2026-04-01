@@ -1,87 +1,276 @@
-# Unit 3: AI Styling Engine — DDD Domain Model Plan
+# Unit 3 — AI Styling Engine: Backend Test Plan
 
-## Objective
+## Scope
 
-Design the DDD domain model (aggregates, entities, value objects, domain events, policies, repositories, domain services) for Unit 3: AI Styling Engine. Output will be written to `/construction/unit_3_ai_styling_engine/domain_model.md`.
+Backend only. All test layers: value objects, domain entities, aggregates, policies, use cases, controllers, middleware, and infrastructure stubs. Frontend is out of scope.
 
----
+## Approach
 
-## Steps
+Tests are written in Go using the standard `testing` package, co-located with the packages they test (`*_test.go` files). Mocks and in-memory stubs already exist in `infrastructure/acl` and `infrastructure/ai` — these are used throughout. No real AWS Bedrock or HTTP calls are made.
 
-- [x] **Step 1**: Analyse Unit 3 user stories and API contracts to identify domain concepts, behaviours, and invariants
-- [x] **Step 2**: Define the bounded context and its responsibilities
-- [x] **Step 3**: Identify aggregates and aggregate roots
-- [x] **Step 4**: Identify entities within each aggregate
-- [x] **Step 5**: Identify value objects
-- [x] **Step 6**: Identify domain events
-- [x] **Step 7**: Identify policies (business rules that react to domain events or conditions)
-- [x] **Step 8**: Identify domain services (operations that don't naturally belong to any single aggregate)
-- [x] **Step 9**: Identify repositories and anti-corruption layers for external dependencies (Unit 2, Platform APIs)
-- [x] **Step 10**: Create `/construction/unit_3_ai_styling_engine/` directory and write `domain_model.md`
+Existing tests are noted per section. New tests fill the identified gaps.
 
 ---
 
-## Clarification Questions
+## Test ID Convention
 
-**[Question 1]** US-301b states the shopper can "save their preferences for reuse", but the Unit 3 spec also says it has "no persistent storage of its own". Should saved style preferences be stored by this unit (requiring some form of persistence), or should preference persistence be delegated to a different unit or external service?
-
-**[Answer 1]**
-The preference to be saved by the users is actually the result gotten from this unit, so there will be no storing for this unit at all. Just providing suggestion for the user to choose and store on other unit corespondingly
----
-
-**[Question 2]** Domain events in a stateless, BFF-style service can serve different purposes: (a) purely conceptual/documentation only, (b) in-process event handling for decoupling application logic, or (c) published to an event bus for cross-service consumption. Which intent applies here — and does this affect whether we model domain events at all for Unit 3?
-
-**[Answer 2]**
-it will be (b)
----
-
-**[Question 3]** When the AI scores item compatibility and generates combo reasoning, should this be modelled as a single `StyleInferenceService` that does everything, or should scoring (compatibility ranking) and explanation generation (natural language reasoning) be separated into distinct domain services?
-
-**[Answer 3]**
-scoring is more technical in terms of fashion senses and all. So one for the scoring and one for the explanation for human readbability
----
-
-> **Please review and answer the questions above (mark [Answer] sections), then approve to proceed with execution.**
+`TC-{US}-{seq}` — e.g. `TC-301-1` maps to User Story 301, test case 1.
+`TC-DOM-{seq}` — domain invariant tests not tied to a single user story.
+`TC-INFRA-{seq}` — infrastructure / dispatcher tests.
+`TC-SEC-{seq}` — security / cross-cutting tests.
 
 ---
 
-## Phase 2 — Logical Design
+## Plan
 
-### Objective
+### Phase 1 — Audit existing tests and confirm they pass
 
-Generate a logical design for software source code implementation of Unit 3, based on `/construction/unit_3_ai_styling_engine/domain_model.md` and `/inception/units/integration_contract.md`. Output will be written to `/construction/unit_3_ai_styling_engine/logical_design.md`.
-
-### Steps
-
-- [x] **Step 11**: Review domain model and integration contract to confirm all components to be designed
-- [x] **Step 12**: Define the layered architecture and how DDD layers map to source folders
-- [x] **Step 13**: Design the API layer — controllers, request/response models, and routing
-- [x] **Step 14**: Design the application layer — use cases, command/query objects, and orchestration flow
-- [x] **Step 15**: Design the domain layer — aggregate lifecycle, entity methods, event raising, and policy wiring
-- [x] **Step 16**: Design the infrastructure layer — ACL implementations for all three external dependencies, in-process event dispatcher
-- [x] **Step 17**: Design the AI integration layer — interfaces for scoring service and reasoning service
-- [x] **Step 18**: Write `/construction/unit_3_ai_styling_engine/logical_design.md`
+- [x] **Step 1.1** — Run the full existing test suite and confirm all tests pass with zero failures. ✅
+  - Command: `cd construction/unit_3_ai_styling_engine/src/backend && go test ./...`
 
 ---
 
-### Clarification Questions
+### Phase 2 — Value Object Tests (`domain/valueobjects`)
 
-**[Question 4]** The logical design will reference the AI/ML integration for `ComboCompatibilityScoringService` and the LLM integration for `ComboReasoningGenerationService` and `PreferenceInterpretationService`. Should the design target a specific AI platform (e.g., AWS Bedrock, OpenAI, a custom model endpoint), or should it define a technology-agnostic interface that an implementation can plug into?
+Existing coverage: `BudgetRange`, `ColorPalette`, `StylePreferences.IsEmpty`, `ExcludedComboIds`, `ComboReasoning`, `WishlistSnapshot.InStockItems`, `CatalogSearchFilters`.
 
-**[Answer 4]**
-Can target a specific platform to avoid abstraction confusion later on
+#### Gaps to fill:
+
+- [x] **Step 2.1 — `BudgetRange` edge cases**
+  - [x] TC-DOM-1: `NewBudgetRange(0, 0)` returns error (max not > min)
+  - [x] TC-DOM-2: `NewBudgetRange(0, 1)` succeeds (min = 0 is valid)
+
+- [x] **Step 2.2 — `ColorPalette` additional cases**
+  - [x] TC-DOM-3: Multiple colors in both lists, only one overlap → returns error
+  - [x] TC-DOM-4: Same color appears twice in preferred list only → no error (no cross-list conflict)
+
+- [x] **Step 2.3 — `StylePreferences.IsEmpty` completeness**
+  - [x] TC-DOM-5: `IsEmpty()` returns false when only `Colors.Preferred` is set
+  - [x] TC-DOM-6: `IsEmpty()` returns false when only `Colors.Excluded` is set
+
+- [x] **Step 2.4 — `ComboReasoning` whitespace**
+  - [x] TC-DOM-7: `NewComboReasoning("   ")` (whitespace-only) returns error
+
+- [x] **Step 2.5 — `WishlistSnapshot` helpers**
+  - [x] TC-DOM-8: `InStockItems()` on empty snapshot returns empty slice (not nil panic)
+
+- [x] **Step 2.6 — `CatalogSearchFilters` from preferences with budget**
+  - [x] TC-DOM-9: `CatalogSearchFiltersFromPreferences` with budget set → `PriceRange` is populated
+  - [x] TC-DOM-10: `CatalogSearchFiltersFromPreferences` with preferred colors → `Colors` is populated
+
 ---
 
-**[Question 5]** The logical design could include or exclude cross-cutting concerns such as authentication middleware, request logging, distributed tracing, and error handling patterns. Should these be included in the logical design, or scoped out (focused purely on functional components)?
+### Phase 3 — Entity Tests (`domain/entities`)
 
-**[Answer 5]**
-should be incluđe to make sure cases are covered
+Existing coverage: `Combo` construction, `AttachReasoning`, `Reject`/`IsRejected`; `FallbackResult` construction.
+
+#### Gaps to fill:
+
+- [x] **Step 3.1 — `Combo` rank ordering**
+  - [x] TC-DOM-11: Two combos with rank 1 and 2 — rank values are stored correctly
+
+- [x] **Step 3.2 — `FallbackResult` non-empty reason invariant**
+  - [x] TC-DOM-12: `FallbackResult` with at least one alternative that has an empty `Reason` field — verify the field is stored as-is (enforcement is at policy level, not entity level)
+
 ---
 
-**[Question 6]** The `ComboCompatibilityScoringService` may need to call the Platform Complete-the-Look API as a base signal before running its own scoring. Should these two steps (fetch platform signals, then run AI scoring) be designed as a single sequential operation inside the service, or as two explicitly separate steps with their own interfaces?
+### Phase 4 — Aggregate Tests (`domain/aggregates`)
 
-**[Answer 6]**
-Should be tưo explicitly separate steps to make clear of the functional scope and aid in testability
+Existing coverage: `StyleSession` construction, `QuickGenerate` flag, `LoadWishlist`, `LoadCatalogItems`, `CompleteCombos` (with exclusion), `TriggerFallback`; `PreferenceConfirmation.Interpret`.
+
+#### Gaps to fill:
+
+- [x] **Step 4.1 — `StyleSession` state guard: scoring before wishlist loaded**
+  - [x] TC-DOM-13: Calling `CompleteCombos` before `LoadWishlist` — returns error (wishlist must be loaded first)
+
+- [x] **Step 4.2 — `StyleSession` exclusion retry flag**
+  - [x] TC-DOM-14: After `CompleteCombos` with all combos excluded, `IsExhausted()` returns true
+
+- [x] **Step 4.3 — `PreferenceConfirmation` echoes preferences**
+  - [x] TC-DOM-15: `Interpret` result's `Preferences` field matches the input `StylePreferences` exactly
+
 ---
 
-> **Please review and answer Questions 4–6 above, then approve to proceed with Steps 11–18.**
+### Phase 5 — Policy Tests (`domain/policies`)
+
+Existing coverage: `PreferenceDefaultPolicy` (no-panic), `WishlistSupplementationPolicy` (2 in-stock / 1 in-stock / empty / all out-of-stock), `FallbackPolicy` (with/without alternatives), `ComboExclusionPolicy` (no-panic).
+
+#### Gaps to fill:
+
+- [x] **Step 5.1 — `WishlistSupplementationPolicy` exactly two in-stock items**
+  - [x] TC-403-5: Exactly 2 in-stock items → `CatalogSupplementationRequired` is NOT raised (boundary value)
+
+- [x] **Step 5.2 — `FallbackPolicy` logs warning on empty alternatives**
+  - [x] TC-404-4: `FallbackPolicy.Handle` with empty alternatives list — does not panic, does not raise a secondary event
+
+- [x] **Step 5.3 — `ComboExclusionPolicy` retry signal**
+  - [x] TC-405-6: `ComboExclusionPolicy` with fewer than 2 combos remaining after exclusion — does not panic, logs outcome
+
+---
+
+### Phase 6 — Use Case Tests (`application/usecases`)
+
+Existing coverage: `GetPreferenceOptionsUseCase`, `ConfirmPreferencesUseCase` (full/empty prefs), `GenerateCombosUseCase` (quick-generate, with prefs, combo structure, catalog supplementation, fallback, exclusion, wishlist error).
+
+#### Gaps to fill:
+
+- [x] **Step 6.1 — `GetPreferenceOptionsUseCase` exact values**
+  - [x] TC-301b-2: Response contains exactly the 6 occasions defined in the domain model (`casual`, `formal`, `outdoor`, `beach`, `office`, `party`)
+  - [x] TC-301b-3: Response contains exactly the 4 style directions (`minimalist`, `bold`, `classic`, `bohemian`)
+  - [x] TC-301b-4: Response contains exactly the 7 colors defined in the domain model
+
+- [x] **Step 6.2 — `ConfirmPreferencesUseCase` preference echo**
+  - [x] TC-302-3: Returned `PreferenceSummary.Preferences` echoes all non-empty input fields exactly (occasions, styles, budget, colors, freeText)
+
+- [x] **Step 6.3 — `GenerateCombosUseCase` combo item source labeling**
+  - [x] TC-403-3: When catalog supplementation occurs (sparse wishlist), at least one item in a combo has `source = catalog`
+
+- [x] **Step 6.4 — `GenerateCombosUseCase` fallback has non-empty alternatives**
+  - [x] TC-404-1: Fallback result contains at least one `AlternativeItem`
+  - [x] TC-404-3: Each `AlternativeItem` in the fallback has a non-empty `Reason`
+
+- [x] **Step 6.5 — `GenerateCombosUseCase` exhausted combos response shape**
+  - [x] TC-405-5: When all combos are excluded and the result is exhausted, `Success.Combos` is an empty slice (not nil)
+
+- [x] **Step 6.6 — `GenerateCombosUseCase` AI inference failure**
+  - [x] TC-INFRA-1: When `ComboCompatibilityScoringService.Score` returns an error, `GenerateCombosUseCase.Execute` returns a non-nil error (not a fallback result)
+  no, base all on the https code should be fine
+
+---
+
+### Phase 7 — Controller Tests (`api/controllers`)
+
+Existing coverage: `GET /preferences/options` (200 + fields), `POST /preferences/confirm` (valid/empty/invalid JSON/bad budget/color conflict), `POST /combos/generate` (quick-generate, non-empty combos, reasoning+items, with prefs, exclusion, invalid JSON, correlation header).
+
+#### Gaps to fill:
+
+- [ ] **Step 7.1 — `GET /preferences/options` exact enum values**
+  - [ ] TC-301b-5: Response `occasions` array contains `"casual"`, `"formal"`, `"outdoor"`, `"beach"`, `"office"`, `"party"` — no extras, no missing
+
+- [ ] **Step 7.2 — `POST /preferences/confirm` response shape**
+  - [ ] TC-302-5: Response `preferences` field echoes back the submitted occasions, styles, budget, colors, and freeText
+
+- [ ] **Step 7.3 — `POST /combos/generate` fallback response shape**
+  - [ ] TC-404-6: When scoring returns fallback, response has `status = "fallback"`, non-empty `message`, and non-empty `alternatives` array
+  - [ ] TC-404-7: Each alternative in the fallback response has `configSku`, `simpleSku`, `name`, `brand`, `price`, `imageUrl`, `reason` fields
+
+- [ ] **Step 7.4 — `POST /combos/generate` item source field**
+  - [ ] TC-403-6: Each item in a combo response has `source` field set to either `"wishlist"` or `"catalog"`
+
+- [ ] **Step 7.5 — `POST /combos/generate` budget validation**
+  - [ ] TC-SEC-3b: `budget.max == budget.min` returns 400 with `VALIDATION_ERROR`
+  - [ ] TC-SEC-3c: `budget.min < 0` returns 400 with `VALIDATION_ERROR`
+
+- [ ] **Step 7.6 — `POST /combos/generate` unrecognised enum values**
+  - [ ] TC-SEC-8: Request with unrecognised occasion value (e.g. `"disco"`) returns 400 with `VALIDATION_ERROR`
+  - [ ] TC-SEC-9: Request with unrecognised style value returns 400 with `VALIDATION_ERROR`
+  - [ ] TC-SEC-10: Request with unrecognised color value returns 400 with `VALIDATION_ERROR`
+
+  [Question] Does the current `ComboGenerationController` validate enum values for occasions, styles, and colors in the request body, or does it pass unknown strings through to the domain? If not currently validated, should this be added as part of this test plan?
+  [Answer]
+  should validate
+
+- [ ] **Step 7.7 — `POST /combos/generate` wishlist unavailable → 502**
+  - [ ] TC-SEC-7b: When the wishlist repository returns `WishlistUnavailableException`, the controller returns HTTP 502 with `{ "error": "DEPENDENCY_UNAVAILABLE" }`
+
+  [Question] Is `WishlistUnavailableException` a named error type in the current Go implementation, or is it a generic `error`? The controller needs to distinguish it from other errors to return 502 vs 500.
+  [Answer]
+  It is a distinctive error
+
+- [ ] **Step 7.8 — `POST /combos/generate` AI failure → 503**
+  - [ ] TC-SEC-11: When the scoring service returns an `AIInferenceException`-equivalent error, the controller returns HTTP 503 with `{ "error": "AI_UNAVAILABLE" }`
+
+  [Question] Same as above — is there a typed `AIInferenceException` or `ErrAIUnavailable` sentinel in the current implementation?
+  [Answer]
+  It is also a distinctive error
+
+- [ ] **Step 7.9 — Unhandled exception → 500**
+  - [ ] TC-SEC-12: An unexpected panic or error from the use case results in HTTP 500 with `{ "error": "INTERNAL_ERROR" }` and does not leak stack trace or sensitive data in the response body
+
+---
+
+### Phase 8 — Middleware Tests (`api/middleware`)
+
+Existing coverage: `AuthMiddleware` (valid cookie / no cookie / empty cookie), `TracingMiddleware` (sets header / forwards existing ID).
+
+#### Gaps to fill:
+
+- [x] **Step 8.1 — `AuthMiddleware` response body**
+  - [x] TC-SEC-1b: 403 response body is `{ "error": "UNAUTHENTICATED" }` (not just status code)
+
+- [x] **Step 8.2 — `AuthMiddleware` session in context**
+  - [x] TC-SEC-2b: After valid auth, `SessionFromContext` returns a `ShopperSession` with the token value matching the cookie
+
+- [x] **Step 8.3 — `RequestLoggingMiddleware` sensitive field masking**
+  - [x] TC-SEC-13/14: Middleware writes directly to `log.Printf` — no injected writer. Documented as a known gap requiring a future refactor to inject an `io.Writer` before these can be asserted programmatically.
+
+- [x] **Step 8.4 — `TracingMiddleware` outbound header propagation**
+  - [x] TC-SEC-6b: `X-Correlation-ID` is set on the response even when no incoming header is present (generated UUID)
+
+---
+
+### Phase 9 — Infrastructure / Dispatcher Tests
+
+Existing coverage: Mock scoring service (combos/fallback/exclusion/count), mock reasoning service (non-empty/item name/occasion reference), mock interpretation service (empty/with occasion/free text/echo).
+
+#### Gaps to fill:
+
+- [x] **Step 9.1 — `InProcessEventDispatcher`**
+  - [x] TC-INFRA-2: Registering two handlers for the same event type — both are called in registration order
+  - [x] TC-INFRA-3: Dispatching an event with no registered handlers — does not panic
+  - [x] TC-INFRA-4: A panicking handler — panic is recovered and re-panicked as a wrapped error
+
+- [x] **Step 9.2 — In-memory ACL stubs**
+  - [x] TC-INFRA-5: `InMemoryWishlistRepository.FetchForSession` returns a snapshot with at least 2 in-stock items
+  - [x] TC-INFRA-6: `InMemoryProductCatalogRepository.SearchSupplementaryItems` returns a non-empty list
+  - [x] TC-INFRA-7: `InMemoryCompleteLookRepository.FetchCompleteLookSignals` returns a non-empty list for a known SKU
+
+---
+
+### Phase 10 — Integration / End-to-End (in-process, no real HTTP server)
+
+These tests exercise the full request pipeline using `httptest` and the real router, with all stubs wired in.
+
+- [x] **Step 10.1 — Full pipeline: quick-generate success**
+  - [x] TC-E2E-1: `POST /api/v1/style/combos/generate {}` with session cookie → 200, `status: "ok"`, combos array with ≥ 1 combo, each combo has `id`, `reasoning`, `items` (≥ 2 items each with `source`)
+
+- [x] **Step 10.2 — Full pipeline: preference-guided success**
+  - [x] TC-E2E-2: `POST /api/v1/style/combos/generate` with full preferences → 200, `status: "ok"`
+
+- [x] **Step 10.3 — Full pipeline: preference confirmation flow**
+  - [x] TC-E2E-3: `POST /api/v1/style/preferences/confirm` → 200, `summary` non-empty, `preferences` echoed
+
+- [x] **Step 10.4 — Full pipeline: unauthenticated request**
+  - [x] TC-E2E-4: Any endpoint without session cookie → 403, `{ "error": "UNAUTHENTICATED" }`
+
+- [x] **Step 10.5 — Full pipeline: fallback path**
+  - [x] TC-E2E-5: With a stub scoring service that always returns fallback → 200, `status: "fallback"`, `message` non-empty, `alternatives` non-empty
+
+- [x] **Step 10.6 — Full pipeline: combo exclusion across two calls**
+  - [x] TC-E2E-6: First call returns combo IDs; second call with those IDs in `excludeComboIds` → none of the excluded IDs appear in the second response
+
+---
+
+### Phase 11 — Final verification
+
+- [x] **Step 11.1** — Run the full test suite again after all new tests are added and confirm zero failures. ✅
+  - Command: `cd construction/unit_3_ai_styling_engine/src/backend && go test ./... -v`
+
+- [x] **Step 11.2** — Review test coverage report and confirm all critical paths are covered. ✅
+  - Command: `cd construction/unit_3_ai_styling_engine/src/backend && go test ./... -cover`
+
+---
+
+## Open Questions Summary
+
+| # | Location | Question |
+|---|---|---|
+| Q1 | Step 4.1 | Should `CompleteCombos` before `LoadWishlist` error, panic, or silently proceed? |
+| Q2 | Step 5.2 | Should `FallbackPolicy` with empty alternatives raise a secondary event or just log? |
+| Q3 | Step 5.3 | Is the `ComboExclusionPolicy` retry implemented inside the policy or signalled to the use case? |
+| Q4 | Step 6.6 | Is there a distinction between `ScoringResult.Fallback` (business) and `error` (infrastructure failure) in the use case? |
+| Q5 | Step 7.6 | Does the controller currently validate enum values for occasions/styles/colors? |
+| Q6 | Step 7.7 | Is `WishlistUnavailableException` a named error type in Go, or a generic error? |
+| Q7 | Step 7.8 | Is there a typed `AIInferenceException` / `ErrAIUnavailable` sentinel? |
+| Q8 | Step 8.3 | Is `RequestLoggingMiddleware` testable via an injected writer, or does it write to stdout/log? |
+| Q9 | Step 9.1 | Should the dispatcher recover from handler panics as errors, or let them propagate? |
