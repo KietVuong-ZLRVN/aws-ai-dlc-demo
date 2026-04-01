@@ -1,0 +1,19 @@
+# 2026/04/01 15:05:42.670244 [TestPriceRange_ValidConstruction] [rapid] draw min: 6.103515625e-05
+# 2026/04/01 15:05:42.670249 [TestPriceRange_ValidConstruction] [rapid] draw max: 1
+# 2026/04/01 15:05:42.670252 [TestPriceRange_ValidConstruction] expected no error for valid range min=6.103515625e-05 max=1, got: invalid price range min "6.103515625e": strconv.ParseFloat: parsing "6.103515625e": invalid syntax
+# 
+v0.4.8#2905347908155837701
+0x0
+0x10000000000000
+0x943dab5850d10
+0xd
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

@@ -1,0 +1,15 @@
+quiet: true
+disable-version-string: true
+with-expecter: true
+outpkg: mocks
+dir: mocks
+packages:
+  wishlist/domain/repository:
+    interfaces:
+      WishlistRepository:
+  wishlist/domain/service:
+    interfaces:
+      AuthSessionService:
+  wishlist/application:
+    interfaces:
+      EventBus:

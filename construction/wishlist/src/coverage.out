@@ -1,0 +1,14 @@
+mode: set
+wishlist/infrastructure/eventbus/app_event_bus_adapter.go:14.38,16.2 1 0
+wishlist/infrastructure/eventbus/app_event_bus_adapter.go:24.71,26.2 1 1
+wishlist/infrastructure/eventbus/app_event_bus_adapter.go:29.80,32.35 1 1
+wishlist/infrastructure/eventbus/app_event_bus_adapter.go:32.35,34.3 1 1
+wishlist/infrastructure/eventbus/app_event_bus_adapter.go:34.8,36.3 1 0
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:25.46,29.2 1 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:31.78,35.2 3 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:39.72,45.29 5 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:45.29,46.10 1 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:46.10,47.17 1 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:47.17,48.33 1 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:48.33,50.6 1 1
+wishlist/infrastructure/eventbus/in_memory_event_bus.go:52.4,52.13 1 1
